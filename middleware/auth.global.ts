@@ -7,7 +7,7 @@ export default defineNuxtRouteMiddleware((to) => {
   // carregar estado das cookies (seguro, só lê)
   authStore.loadUserFromStorage()
 
-  const publicRoutes = ['/login']
+  const publicRoutes = ['/login', '/signup', '/']
 
   if (!authStore.isAuthenticated && !publicRoutes.includes(to.path)) {
     return navigateTo('/login')

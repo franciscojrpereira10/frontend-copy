@@ -15,17 +15,32 @@
             <NuxtLink to="/publications" class="nav-link" active-class="active-link">
               Publicações
             </NuxtLink>
+            <NuxtLink to="/tags" class="nav-link" active-class="active-link">
+              Tags
+            </NuxtLink>
             
             <NuxtLink to="/publications/create" class="nav-link create-btn" active-class="active-create">
               <span class="plus-icon">+</span> Novo Artigo
+            </NuxtLink>
+
+            <NuxtLink 
+              v-if="authStore.userRole === 'ADMIN'" 
+              to="/admin/users" 
+              class="nav-link" 
+              active-class="active-link"
+            >
+              Gestão de Utilizadores
             </NuxtLink>
           </template>
         </div>
 
         <div class="nav-right">
           <template v-if="!authStore.isAuthenticated">
-            <NuxtLink to="/login" class="login-btn">
+            <NuxtLink to="/login" class="nav-link" style="margin-right: 12px">
               Entrar
+            </NuxtLink>
+            <NuxtLink to="/signup" class="login-btn">
+              Criar Conta
             </NuxtLink>
           </template>
 
@@ -34,15 +49,6 @@
               <span class="username-display">
                 {{ authStore.user?.username }}
               </span>
-
-              <NuxtLink 
-                v-if="authStore.userRole === 'Administrator'" 
-                to="/admin" 
-                class="admin-badge"
-                title="Área de Administração"
-              >
-                Admin
-              </NuxtLink>
             </div>
 
             <button @click="authStore.logout()" class="logout-btn" title="Terminar Sessão">

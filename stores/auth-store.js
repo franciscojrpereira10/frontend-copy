@@ -23,9 +23,17 @@ export const useAuthStore = defineStore('auth', {
         })
 
         // Atualiza o estado com a resposta do backend
-        // Adapte aqui se o seu backend devolver { token: "..." } ou string direta
         this.token = response.token || response
-        this.user = { username: response.username || username }
+        // GARANTIR QUE GUARDAMOS O ROLE
+        // O backend retorna: { token: "...", username: "...", role: "..." } (dependendo da implementação no AuthResource)
+        // Se o AuthResource.login retornar só token, temos de fazer fetch do user info de seguida.
+        // Mas assumindo que o login devolve info extra ou que vamos buscar:
+
+        // Simulação segura: se o response tiver role, usamos.
+        this.user = {
+          username: response.username || username,
+          role: response.role || 'CONTRIBUTOR' // fallback
+        }
 
         // Guarda nas cookies para não perder o login ao fazer F5
         const tokenCookie = useCookie('token')

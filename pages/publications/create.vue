@@ -45,7 +45,13 @@
           </div>
 
           <div class="form-group">
-            <label for="summary">Resumo *</label>
+            <div class="label-row">
+              <label for="summary">Resumo *</label>
+              <button type="button" @click="generateSummary" class="ai-btn" :disabled="generatingAI || !form.title" title="Preenche o título e autores primeiro">
+                <span v-if="generatingAI">⏳ A gerar...</span>
+                <span v-else>✨ Gerar com IA</span>
+              </button>
+            </div>
             <textarea 
               id="summary" v-model="form.summary" rows="4" required
               placeholder="Descreve brevemente o conteúdo do documento..."
@@ -143,6 +149,7 @@ const file = ref(null)
 
 // Estados de UI
 const loading = ref(false)
+const generatingAI = ref(false)
 const error = ref('')
 const isDragging = ref(false)
 const fileInput = ref(null)
@@ -196,6 +203,46 @@ function formatSize(bytes) {
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+// --- AI Summary Generation ---
+async function generateSummary() {
+  if (!form.value.title || !form.value.authors) {
+    error.value = 'Preenche o Título e Autores antes de gerar o resumo.'
+    return
+  }
+
+  generatingAI.value = true
+  error.value = ''
+
+  try {
+    const areaToSend = areaMapping[form.value.scientificArea] || form.value.scientificArea
+    
+    const response = await $fetch(`${config.public.apiBase}/publications/ai-summary`, {
+      method: 'POST',
+      body: {
+        title: form.value.title,
+        authors: form.value.authors,
+        scientificArea: areaToSend,
+        currentSummary: form.value.summary || '',
+        language: 'pt',
+        maxLength: 500
+      },
+      headers: {
+        Authorization: `Bearer ${authStore.token}`
+      }
+    })
+
+    if (response.summary) {
+      form.value.summary = response.summary
+    }
+
+  } catch (err) {
+    console.error(err)
+    error.value = 'Erro ao gerar resumo IA. Verifica se o backend está ligado.'
+  } finally {
+    generatingAI.value = false
+  }
 }
 
 // --- Envio do Formulário ---
@@ -300,6 +347,20 @@ textarea.form-input { resize: vertical; min-height: 100px; }
 .hidden-input { display: none; }
 .upload-icon { font-size: 2rem; display: block; margin-bottom: 10px; }
 .link-text { color: #2563eb; font-weight: 600; text-decoration: underline; }
+
+.hidden-input { display: none; }
+.upload-icon { font-size: 2rem; display: block; margin-bottom: 10px; }
+.link-text { color: #2563eb; font-weight: 600; text-decoration: underline; }
+
+.label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.ai-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white; border: none; padding: 4px 12px; border-radius: 20px;
+  font-size: 0.75rem; font-weight: 600; cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+}
+.ai-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 2px 5px rgba(99, 102, 241, 0.3); }
+.ai-btn:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(0.5); }
 
 .file-preview { display: flex; align-items: center; justify-content: center; gap: 15px; }
 .file-icon { font-size: 1.5rem; }
