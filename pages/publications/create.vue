@@ -134,7 +134,7 @@ const config = useRuntimeConfig()
 // Estado do Formulário
 const form = ref({
   title: '',
-  scientificArea: '',
+  scientificArea: '', // Aqui fica o valor em PT selecionado
   authors: '',
   summary: ''
 })
@@ -146,6 +146,15 @@ const loading = ref(false)
 const error = ref('')
 const isDragging = ref(false)
 const fileInput = ref(null)
+
+// --- MAPEAMENTO (PT -> EN) ---
+// Traduz para Inglês antes de enviar ao Backend
+const areaMapping = {
+  'Ciência de Dados': 'Data Science',
+  'Ciência dos Materiais': 'Materials Science',
+  'Engenharia de Software': 'Software Engineering',
+  'Inteligência Artificial': 'Artificial Intelligence'
+}
 
 // --- Gestão de Ficheiros ---
 function triggerFileInput() {
@@ -178,7 +187,7 @@ function validateAndSetFile(selectedFile) {
 
 function removeFile() {
   file.value = null
-  fileInput.value.value = '' // Reset input
+  fileInput.value.value = '' 
 }
 
 function formatSize(bytes) {
@@ -189,7 +198,7 @@ function formatSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-// --- Envio do Formulário (CORRIGIDO) ---
+// --- Envio do Formulário ---
 async function handleSubmit() {
   if (!file.value) {
     error.value = 'Por favor seleciona um ficheiro.'
@@ -200,37 +209,39 @@ async function handleSubmit() {
   error.value = ''
 
   try {
-    // 1. Criar FormData para suportar envio de ficheiros
+    // 1. TRADUÇÃO: Converte "Ciência de Dados" para "Data Science"
+    const areaToSend = areaMapping[form.value.scientificArea] || form.value.scientificArea
+
+    // 2. Criar FormData
     const formData = new FormData()
     formData.append('title', form.value.title)
-    formData.append('scientificArea', form.value.scientificArea)
+    
+    // ATENÇÃO: Envia a versão traduzida (Inglês)
+    formData.append('scientificArea', areaToSend) 
+    
     formData.append('authors', form.value.authors)
     formData.append('summary', form.value.summary)
-    formData.append('filename', file.value.name) // Auxiliar para o backend
-    formData.append('file', file.value) // O ficheiro binário (obrigatório)
+    formData.append('filename', file.value.name) 
+    formData.append('file', file.value) 
     
-    // Tratamento de tags
     if (tagsInput.value) {
        formData.append('tags', tagsInput.value)
     }
 
-    // 2. Usar $fetch em vez de useFetch para ações de clique
-    // 3. Apontar para o novo endpoint /upload que criámos no Java
+    // 3. Enviar para o backend
     await $fetch(`${config.public.apiBase}/publications/upload`, {
       method: 'POST',
       body: formData,
       headers: {
         Authorization: `Bearer ${authStore.token}`
-        // NÃO colocar Content-Type aqui, o browser trata disso automaticamente no FormData
       }
     })
 
-    // Sucesso
+    // Redireciona para a lista
     router.push('/publications')
 
   } catch (err) {
     console.error(err)
-    // Extrair mensagem de erro do backend se existir
     const msg = err.data || err.message || 'Ocorreu um erro ao enviar.'
     error.value = msg
   } finally {

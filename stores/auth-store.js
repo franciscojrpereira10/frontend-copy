@@ -22,12 +22,14 @@ export const useAuthStore = defineStore('auth', {
           body: { username, password }
         })
 
-        // backend: { token: "...", username: "..." }
-        this.token = response.token
-        this.user = { username: response.username }
+        // Atualiza o estado com a resposta do backend
+        // Adapte aqui se o seu backend devolver { token: "..." } ou string direta
+        this.token = response.token || response
+        this.user = { username: response.username || username }
 
+        // Guarda nas cookies para não perder o login ao fazer F5
         const tokenCookie = useCookie('token')
-        tokenCookie.value = response.token
+        tokenCookie.value = this.token
 
         const userCookie = useCookie('user')
         userCookie.value = this.user
@@ -52,12 +54,17 @@ export const useAuthStore = defineStore('auth', {
       router.push('/login')
     },
 
+    // --- ESTA É A FUNÇÃO QUE FALTAVA ---
+    // O app.vue chama esta função ao arrancar. 
+    // Ela recupera o token das cookies para manteres o login ativo.
     loadUserFromStorage() {
       const tokenCookie = useCookie('token')
       const userCookie = useCookie('user')
 
       if (tokenCookie.value) {
         this.token = tokenCookie.value
+      }
+      if (userCookie.value) {
         this.user = userCookie.value
       }
     }
