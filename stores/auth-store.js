@@ -49,7 +49,21 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    logout() {
+    async logout() {
+      const config = useRuntimeConfig()
+
+      // Tenta avisar o backend para limpar o lastLogin
+      if (this.token) {
+        try {
+          await $fetch(`${config.public.apiBase}/auth/logout`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${this.token}` }
+          })
+        } catch (e) {
+          console.error('Erro no logout de backend:', e)
+        }
+      }
+
       this.token = null
       this.user = null
 
@@ -75,6 +89,28 @@ export const useAuthStore = defineStore('auth', {
       if (userCookie.value) {
         this.user = userCookie.value
       }
+    },
+
+    async recoverPassword(email) {
+      const config = useRuntimeConfig()
+      try {
+        const response = await $fetch(`${config.public.apiBase}/auth/recover`, {
+          method: 'POST',
+          body: { email }
+        })
+        return response
+      } catch (error) {
+        console.error('Erro ao recuperar password:', error)
+        throw error
+      }
+    },
+
+    async resetPassword(token, password) {
+      const config = useRuntimeConfig()
+      await $fetch(`${config.public.apiBase}/auth/reset-password`, {
+        method: 'POST',
+        body: { token, password }
+      })
     }
   }
 })

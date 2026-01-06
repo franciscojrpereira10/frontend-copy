@@ -41,9 +41,23 @@ async function handleSignup() {
   } catch (e) {
     console.error(e)
     if (e.response && e.response.status === 409) {
-      error.value = 'Este username já está em uso.'
+      const msg = e.response._data
+      if (msg && msg.message) {
+        error.value = msg.message
+      } else if (typeof msg === 'string') {
+        error.value = msg
+      } else {
+        error.value = 'Utilizador ou Email já existem.'
+      }
     } else {
-      error.value = 'Erro ao criar conta. Tenta novamente.'
+      const msg = e.response?._data || e.response?.data
+      if (msg && msg.message) {
+        error.value = msg.message
+      } else if (typeof msg === 'string') {
+        error.value = msg
+      } else {
+        error.value = 'Erro ao criar conta. Tenta novamente.'
+      }
     }
   } finally {
     loading.value = false
@@ -158,8 +172,19 @@ async function handleSignup() {
 }
 
 .error-msg {
-  background: #fef2f2; color: #ef4444; padding: 12px;
-  border-radius: 8px; font-size: 0.9rem; text-align: center;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #ef4444;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.error-msg::before {
+  content: '⚠️';
 }
 
 .submit-btn {

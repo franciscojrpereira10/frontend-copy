@@ -10,49 +10,84 @@
         <p>Acede à tua conta do Centro XYZ</p>
       </div>
 
-      <form @submit.prevent="handleLogin" class="login-form">
-        
-        <div class="form-group">
-          <label for="username">Nome de Utilizador</label>
-          <div class="input-wrapper">
-            <input 
-              id="username"
-              v-model="username" 
-              type="text" 
-              required 
-              placeholder="Ex: admin"
-              class="form-input" 
-              :disabled="loading"
-            />
+      <div v-if="view === 'login'">
+        <form @submit.prevent="handleLogin" class="login-form">
+          <div class="form-group">
+            <label for="username">Nome de Utilizador</label>
+            <div class="input-wrapper">
+              <input 
+                id="username"
+                v-model="username" 
+                type="text" 
+                required 
+                placeholder="Ex: admin"
+                class="form-input" 
+                :disabled="loading"
+              />
+            </div>
           </div>
-        </div>
 
-        <div class="form-group">
-          <label for="password">Palavra-passe</label>
-          <div class="input-wrapper">
-            <input 
-              id="password"
-              v-model="password" 
-              type="password" 
-              required 
-              placeholder="••••••••"
-              class="form-input" 
-              :disabled="loading"
-            />
+          <div class="form-group">
+            <label for="password">Palavra-passe</label>
+            <div class="input-wrapper">
+              <input 
+                id="password"
+                v-model="password" 
+                type="password" 
+                required 
+                placeholder="••••••••"
+                class="form-input" 
+                :disabled="loading"
+              />
+            </div>
+
+            <div class="forgot-password">
+              <a href="#" @click.prevent="view = 'recover'">Esqueceste-te da password?</a>
+            </div>
           </div>
+
+          <button type="submit" :disabled="loading" class="submit-btn">
+            <span v-if="loading" class="spinner"></span>
+            <span v-else>Entrar na Plataforma</span>
+          </button>
+        </form>
+      </div>
+
+      <div v-else-if="view === 'recover'">
+        <div class="recover-header">
+           <p>Insere o teu email para recuperar a password.</p>
         </div>
+        <form @submit.prevent="handleRecover" class="login-form">
+          <div class="form-group">
+            <label for="email">Email</label>
+            <div class="input-wrapper">
+              <input 
+                id="email"
+                v-model="email" 
+                type="email" 
+                required 
+                placeholder="exemplo@email.com"
+                class="form-input" 
+                :disabled="loading"
+              />
+            </div>
+          </div>
 
-        <button type="submit" :disabled="loading" class="submit-btn">
-          <span v-if="loading" class="spinner"></span>
-          <span v-else>Entrar na Plataforma</span>
-        </button>
+          <button type="submit" :disabled="loading" class="submit-btn">
+            <span v-if="loading" class="spinner"></span>
+            <span v-else>Enviar Email</span>
+          </button>
 
-      </form>
+          <div class="back-link">
+             <a href="#" @click.prevent="view = 'login'">Voltar ao Login</a>
+          </div>
+        </form>
+      </div>
 
       <transition name="fade">
-        <div v-if="error" class="error-alert">
-          <span class="error-icon">⚠️</span>
-          {{ error }}
+        <div v-if="message" :class="['alert', isError ? 'error-alert' : 'success-alert']">
+          <span class="icon">{{ isError ? '⚠️' : '✅' }}</span>
+          {{ message }}
         </div>
       </transition>
 
@@ -65,9 +100,18 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '~/stores/auth-store'
 
+const view = ref('login') // 'login' | 'recover'
+
+// Login Data
 const username = ref('')
 const password = ref('')
-const error = ref('')
+
+// Recover Data
+const email = ref('')
+
+// Shared Data
+const message = ref('') // Usado para erros de login e sucesso de recover
+const isError = ref(false)
 const loading = ref(false)
 
 const router = useRouter()
@@ -75,14 +119,52 @@ const authStore = useAuthStore()
 
 async function handleLogin() {
   loading.value = true
-  error.value = ''
+  message.value = ''
+  isError.value = true // Login msg são erros por defeito
   
   try {
     await authStore.login(username.value, password.value)
     router.push('/') 
   } catch (err) {
-    error.value = 'Credenciais inválidas. Tenta novamente.'
-    console.error(err)
+    if (err.response && err.response.status === 409) {
+        message.value = '⚠️ Esta conta já tem uma sessão ativa noutro dispositivo.'
+        return
+    }
+    const msg = err.response?._data || err.response?.data
+    if (msg) {
+        message.value = (typeof msg === 'string') ? msg : (msg.message || JSON.stringify(msg))
+    } else {
+        message.value = 'Credenciais inválidas ou erro de servidor.'
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleRecover() {
+  loading.value = true
+  message.value = ''
+  isError.value = false
+  
+  try {
+    await authStore.recoverPassword(email.value)
+    message.value = 'Email enviado! Verifica o teu email.'
+    isError.value = false
+    email.value = ''
+  } catch (err) {
+    isError.value = true
+    const msg = err.response?._data || err.response?.data
+    if (msg) {
+        if (typeof msg === 'string') {
+            message.value = msg
+        } else if (msg.message) {
+            message.value = msg.message
+        } else {
+            message.value = JSON.stringify(msg)
+        }
+    } else {
+        message.value = 'Erro ao enviar email.'
+    }
   } finally {
     loading.value = false
   }
@@ -162,12 +244,27 @@ label {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.error-alert {
-  margin-top: 24px; padding: 12px 16px; background-color: #fef2f2;
-  border: 1px solid #fecaca; color: #ef4444; border-radius: 12px;
+.error-alert { background-color: #fef2f2; border: 1px solid #fecaca; color: #ef4444; }
+.success-alert { background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; }
+
+.alert {
+  margin-top: 24px; padding: 12px 16px; border-radius: 12px;
   font-size: 0.9rem; display: flex; align-items: center; gap: 8px;
 }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.forgot-password {
+  text-align: right; margin-top: 8px;
+}
+.forgot-password a, .back-link a {
+  font-size: 0.85rem; color: #2563eb; text-decoration: none; font-weight: 500;
+}
+.forgot-password a:hover, .back-link a:hover {
+  text-decoration: underline; color: #1d4ed8;
+}
+
+.back-link { text-align: center; margin-top: 20px; }
+.recover-header { text-align: center; margin-bottom: 20px; color: #64748b; font-size: 0.95rem; }
 </style>

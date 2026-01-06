@@ -21,10 +21,6 @@
             <NuxtLink to="/login" class="btn btn-primary">
               <span class="icon">🔐</span> Aceder à Plataforma
             </NuxtLink>
-            
-            <NuxtLink to="/publications" class="btn btn-secondary">
-              Consultar Acervo Público
-            </NuxtLink>
           </template>
 
           <template v-else>

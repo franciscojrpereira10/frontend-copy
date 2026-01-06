@@ -42,6 +42,8 @@ async function toggleSubscribe(tag) {
       }
     })
     tag.subscribed = !subscribed
+    // "F5 Automático": Recarrega os dados do servidor para atualizar contadores e estado
+    await loadTags()
   } catch (e) {
     console.error(e)
     alert('Erro ao atualizar subscrição da tag.')
@@ -87,7 +89,7 @@ watch(() => authStore.token, (val) => {
         
         <div class="metrics">
           <div class="metric">
-            <strong>{{ t.publicationsCount || 0 }}</strong>
+            <strong>{{ t.publicationCount || 0 }}</strong>
             <span>Artigos</span>
           </div>
           <div class="metric">

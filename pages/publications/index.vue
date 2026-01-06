@@ -234,6 +234,7 @@ const formatDate = (dateString) => {
             <div class="card-content">
             <div class="card-header">
                 <span class="badge area">{{ pub.scientificArea || 'Geral' }}</span>
+                <span v-if="!pub.visible" class="hidden-badge-card">OCULTA</span>
                 <span class="date" v-if="pub.createdAt">{{ formatDate(pub.createdAt) }}</span>
             </div>
             
@@ -430,6 +431,7 @@ const formatDate = (dateString) => {
 .card-content { padding: 24px; display: flex; flex-direction: column; height: 100%; }
 .card-header { display: flex; justify-content: space-between; margin-bottom: 16px; align-items: center; }
 .badge.area { background: #eff6ff; color: #4f46e5; padding: 4px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+.hidden-badge-card { background: #fecaca; color: #991b1b; padding: 2px 8px; border-radius: 99px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-right: 8px; }
 .date { font-size: 0.85rem; color: #9ca3af; }
 .card-title { font-size: 1.25rem; font-weight: 700; color: #1f2937; margin: 0 0 20px 0; line-height: 1.4; flex-grow: 1; }
 .card-footer { border-top: 1px solid #f3f4f6; padding-top: 16px; margin-top: auto; }

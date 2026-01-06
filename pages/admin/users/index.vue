@@ -13,6 +13,17 @@ const router = useRouter()
 const users = ref([])
 const loading = ref(false)
 const error = ref('')
+const sortDirection = ref('asc') // 'asc' | 'desc'
+
+const sortedUsers = computed(() => {
+  return [...users.value].sort((a, b) => {
+    return sortDirection.value === 'asc' ? a.id - b.id : b.id - a.id
+  })
+})
+
+function toggleSort() {
+  sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+}
 
 async function loadUsers() {
   if (authStore.userRole !== 'ADMIN') {
@@ -166,7 +177,9 @@ onMounted(() => {
       <table class="users-table">
         <thead>
           <tr>
-            <th>ID</th>
+            <th @click="toggleSort" class="sortable-header" title="Ordenar por ID">
+              ID {{ sortDirection === 'asc' ? '▲' : '▼' }}
+            </th>
             <th>Utilizador</th>
             <th>Email</th>
             <th>Role</th>
@@ -175,7 +188,7 @@ onMounted(() => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="user in users" :key="user.id">
+          <tr v-for="user in sortedUsers" :key="user.id">
             <td>#{{ user.id }}</td>
             <td>
               <div class="user-info">
@@ -250,6 +263,8 @@ onMounted(() => {
   background: #f8fafc; padding: 16px; font-weight: 600; color: #475569;
   border-bottom: 1px solid #e2e8f0; font-size: 0.85rem; text-transform: uppercase;
 }
+.sortable-header { cursor: pointer; user-select: none; }
+.sortable-header:hover { background: #f1f5f9; color: #334155; }
 .users-table td { padding: 16px; border-bottom: 1px solid #e2e8f0; color: #334155; }
 .users-table tr:last-child td { border-bottom: none; }
 .users-table tr:hover { background: #f8fafc; }

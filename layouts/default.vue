@@ -18,6 +18,9 @@
             <NuxtLink to="/tags" class="nav-link" active-class="active-link">
               Tags
             </NuxtLink>
+            <NuxtLink to="/statistics" class="nav-link" active-class="active-link">
+              Estatísticas
+            </NuxtLink>
             
             <NuxtLink to="/publications/create" class="nav-link create-btn" active-class="active-create">
               <span class="plus-icon">+</span> Novo Artigo
