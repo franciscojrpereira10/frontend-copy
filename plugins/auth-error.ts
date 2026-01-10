@@ -17,11 +17,17 @@ export default defineNuxtPlugin((nuxtApp) => {
             return await originalFetch(...args)
         } catch (err: any) {
             if (err.response?.status === 401) {
-                // Token inválido (bloqueado user status)
+                // Token inválido (bloqueado user status ou expirado)
                 authStore.token = null
                 authStore.user = null
-                authStore.userRole = null
-                navigateTo('/login')
+                authStore.originalRole = null
+
+                const route = useRoute()
+                // Se estivermos na página de reset password, não redirecionar para login
+                // Apenas limpamos a sessão para permitir que o reset continue
+                if (route.path !== '/reset-password' && route.path !== '/recover-password') {
+                    navigateTo('/login')
+                }
             }
             throw err
         }

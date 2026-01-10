@@ -16,7 +16,7 @@ const authorQuery = ref('')
 
 // ---- PAGINAÇÃO ----
 const page = ref(0)
-const pageSize = 9 
+const pageSize = 10 
 const hasMore = ref(false)
 
 // ---- DADOS AUXILIARES ----

@@ -4,12 +4,14 @@ import { defineStore } from 'pinia'
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
-    token: null
+    token: null,
+    originalRole: null // Armazena o role original durante imitação
   }),
 
   getters: {
     isAuthenticated: (state) => !!state.token,
-    userRole: (state) => state.user?.role || null
+    userRole: (state) => state.user?.role || null,
+    isImpersonating: (state) => !!state.originalRole
   },
 
   actions: {
@@ -24,15 +26,11 @@ export const useAuthStore = defineStore('auth', {
 
         // Atualiza o estado com a resposta do backend
         this.token = response.token || response
-        // GARANTIR QUE GUARDAMOS O ROLE
-        // O backend retorna: { token: "...", username: "...", role: "..." } (dependendo da implementação no AuthResource)
-        // Se o AuthResource.login retornar só token, temos de fazer fetch do user info de seguida.
-        // Mas assumindo que o login devolve info extra ou que vamos buscar:
+        this.originalRole = null // Reset impersonation on login
 
-        // Simulação segura: se o response tiver role, usamos.
         this.user = {
           username: response.username || username,
-          role: response.role || 'CONTRIBUTOR' // fallback
+          role: response.role || 'CONTRIBUTOR'
         }
 
         // Guarda nas cookies para não perder o login ao fazer F5
@@ -41,6 +39,10 @@ export const useAuthStore = defineStore('auth', {
 
         const userCookie = useCookie('user')
         userCookie.value = this.user
+
+        // Garante que limpamos cookie de role original
+        const originalRoleCookie = useCookie('original_role')
+        originalRoleCookie.value = null
 
         return true
       } catch (error) {
@@ -66,11 +68,14 @@ export const useAuthStore = defineStore('auth', {
 
       this.token = null
       this.user = null
+      this.originalRole = null
 
       const tokenCookie = useCookie('token')
       tokenCookie.value = null
       const userCookie = useCookie('user')
       userCookie.value = null
+      const originalRoleCookie = useCookie('original_role')
+      originalRoleCookie.value = null
 
       const router = useRouter()
       router.push('/login')
@@ -82,6 +87,7 @@ export const useAuthStore = defineStore('auth', {
     loadUserFromStorage() {
       const tokenCookie = useCookie('token')
       const userCookie = useCookie('user')
+      const originalRoleCookie = useCookie('original_role')
 
       if (tokenCookie.value) {
         this.token = tokenCookie.value
@@ -89,6 +95,41 @@ export const useAuthStore = defineStore('auth', {
       if (userCookie.value) {
         this.user = userCookie.value
       }
+      if (originalRoleCookie.value) {
+        this.originalRole = originalRoleCookie.value
+      }
+    },
+
+    impersonateUser() {
+      if (!this.user || this.originalRole) return
+
+      // Guarda o role atual
+      this.originalRole = this.user.role
+
+      // Muda para user normal (simulação)
+      this.user.role = 'CONTRIBUTOR'
+
+      // Persistência
+      const originalRoleCookie = useCookie('original_role')
+      originalRoleCookie.value = this.originalRole
+
+      const userCookie = useCookie('user')
+      userCookie.value = this.user
+    },
+
+    stopImpersonation() {
+      if (!this.originalRole || !this.user) return
+
+      // Restaura o role
+      this.user.role = this.originalRole
+      this.originalRole = null
+
+      // Limpa cookies
+      const originalRoleCookie = useCookie('original_role')
+      originalRoleCookie.value = null
+
+      const userCookie = useCookie('user')
+      userCookie.value = this.user
     },
 
     async recoverPassword(email) {
