@@ -173,7 +173,7 @@ async function downloadFile() {
   }
 }
 
-const formatDate = (d) => d ? new Date(d).toLocaleDateString('pt-PT') : ''
+const formatDate = (d) => d ? new Date(d).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
 
 // --- CORREÇÃO 3: Estado de Permissões ---
 const canEdit = computed(() => {
@@ -210,6 +210,31 @@ async function handleDelete() {
 
 const showRatingsModal = ref(false)
 const ratingsList = ref([])
+
+// ---- HISTÓRICO DE VERSÕES ----
+const showHistoryModal = ref(false)
+const historyData = ref([])
+const loadingHistory = ref(false)
+
+async function fetchHistory() {
+  const token = authStore.token || tokenCookie.value
+  if (!token) return
+  
+  loadingHistory.value = true
+  try {
+    const data = await $fetch(`${api}/publications/${pubId}/history`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    // data = { publicationId:..., editHistory: [...], totalEdits: ... }
+    historyData.value = data.editHistory || []
+    showHistoryModal.value = true
+  } catch (e) {
+    console.error("Erro ao carregar histórico", e)
+    alert("Erro ao carregar histórico de edições.")
+  } finally {
+    loadingHistory.value = false
+  }
+}
 
 // ---- GESTÃO DE COMENTÁRIOS ----
 async function handleDeleteComment(commentId) {
@@ -368,6 +393,46 @@ async function removeTag(tagToRemove) {
     alert('Erro ao remover tag.')
   }
 }
+
+// Pagination
+const currentPage = ref(1)
+const itemsPerPage = 5
+
+const paginatedHistory = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return historyData.value.slice(start, start + itemsPerPage)
+})
+
+const totalPages = computed(() => {
+  return Math.ceil(historyData.value.length / itemsPerPage)
+})
+
+function nextPage() {
+  if (currentPage.value < totalPages.value) currentPage.value++
+}
+
+function prevPage() {
+  if (currentPage.value > 1) currentPage.value--
+}
+
+// Reset page when opening modal
+watch(showHistoryModal, (val) => {
+  if (val) currentPage.value = 1
+})
+
+// Helpers
+const translateField = (field) => {
+  const map = {
+    'title': 'Título',
+    'summary': 'Resumo',
+    'authors': 'Autores',
+    'scientificArea': 'Área Científica',
+    'filename': 'Ficheiro',
+    'fileType': 'Tipo de Ficheiro',
+    'tags': 'Tags'
+  }
+  return map[field] || field
+}
 </script>
 
 <template>
@@ -408,6 +473,16 @@ async function removeTag(tagToRemove) {
                 :title="publication.visible ? 'Ocultar Publicação' : 'Mostar Publicação'"
               >
                 {{ publication.visible ? '👁️' : '🔒' }}
+              </button>
+
+              <!-- Botão Histórico -->
+              <button 
+                 v-if="canEdit" 
+                 @click="fetchHistory" 
+                 class="icon-btn history" 
+                 title="Ver Histórico de Edições"
+              >
+                🕒
               </button>
 
               <NuxtLink v-if="canEdit" :to="`/publications/${pubId}/edit`" class="icon-btn edit" title="Editar">
@@ -589,6 +664,52 @@ async function removeTag(tagToRemove) {
         </div>
       </div>
 
+      <!-- MODAL DE HISTÓRICO -->
+      <div v-if="showHistoryModal" class="modal-overlay" @click.self="showHistoryModal = false">
+        <div class="modal-window history-modal">
+          <header class="modal-header">
+            <h3>Histórico de Edições</h3>
+            <button @click="showHistoryModal = false" class="close-btn">×</button>
+          </header>
+          
+          <div class="modal-content">
+            <div v-if="historyData.length">
+              <ul class="history-list">
+                <li v-for="(edit, index) in paginatedHistory" :key="index" class="history-item">
+                  <div class="history-meta">
+                     <span class="history-date">{{ formatDate(edit.timestamp) }}</span>
+                     <span class="history-user">por {{ edit.username || 'Sistema' }}</span>
+                  </div>
+                  <div class="history-changes">
+                     <p class="change-detail">
+                       <strong>{{ translateField(edit.fieldChanged) }}:</strong>
+                     </p>
+                     
+                     <div class="diff-box">
+                       <div v-if="edit.oldValue" class="old-val">
+                         <span class="label">Antes:</span> "{{ edit.oldValue }}"
+                       </div>
+                       <div class="new-val">
+                         <span class="label">Depois:</span> "{{ edit.newValue }}"
+                       </div>
+                     </div>
+                  </div>
+                </li>
+              </ul>
+
+              <!-- Controles de Paginação -->
+              <div v-if="totalPages > 1" class="pagination-controls">
+                <button v-if="currentPage > 1" @click="prevPage" class="btn secondary small">Anterior</button>
+                <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
+                <button v-if="currentPage < totalPages" @click="nextPage" class="btn secondary small">Seguinte</button>
+              </div>
+            </div>
+            
+            <p v-else class="empty-list">Não existem edições registadas.</p>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
@@ -626,10 +747,7 @@ async function removeTag(tagToRemove) {
 .authors { font-size: 1.1rem; color: #4b5563; }
 
 .icon-btn.hidden { background: #fff1f2; border-color: #fda4af; color: #be123c; }
-.icon-btn.hidden { background: #fff1f2; border-color: #fda4af; color: #be123c; }
 .hidden-badge { background: #fecaca; color: #991b1b; padding: 2px 8px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-left: 10px; vertical-align: middle; }
-
-.badges { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
 
 .tags-list { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
 .tag { background: #f3f4f6; color: #4b5563; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 6px; }
@@ -757,4 +875,26 @@ async function removeTag(tagToRemove) {
 .rating-info .stars { color: #fbbf24; font-weight: 700; }
 .rating-info small { color: #9ca3af; font-size: 0.8rem; }
 .empty-list { text-align: center; color: #6b7280; font-style: italic; }
+
+/* HISTORY MODAL */
+.history-modal { max-width: 700px; }
+.history-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 16px; }
+.history-item { border-bottom: 1px solid #e5e7eb; padding-bottom: 16px; }
+.history-item:last-child { border-bottom: none; }
+
+.history-meta { display: flex; justify-content: space-between; font-size: 0.85rem; color: #6b7280; margin-bottom: 8px; background: #f9fafb; padding: 6px 10px; border-radius: 6px; }
+.history-date { font-weight: 600; color: #374151; }
+
+.change-detail strong { color: #4f46e5; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; }
+.diff-box { margin-top: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; font-size: 0.95rem; }
+.old-val { color: #ef4444; text-decoration: line-through; margin-bottom: 4px; opacity: 0.8; font-size: 0.9rem; }
+.new-val { color: #16a34a; font-weight: 500; }
+.label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; margin-right: 4px; text-decoration: none; font-weight: 600; }
+
+.pagination-controls { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 20px; padding-top: 10px; border-top: 1px solid #f3f4f6; }
+.pagination-controls .btn { margin: 0; }
+.page-info { font-size: 0.9rem; color: #6b7280; font-weight: 500; }
+
+.empty-list { text-align: center; color: #6b7280; font-style: italic; padding: 20px; }
 </style>
+

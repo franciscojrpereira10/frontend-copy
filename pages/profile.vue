@@ -237,9 +237,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 
-definePageMeta({
-  middleware: ['auth']
-})
+// definePageMeta({
+//   middleware: ['auth']
+// }) REMOVIDO: Middleware auth.js foi apagado, usamos auth.global.ts
+
 
 const config = useRuntimeConfig()
 const { $toast } = useNuxtApp() 

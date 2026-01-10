@@ -115,6 +115,15 @@ const publications = computed(() => {
       if (field === 'createdAt') {
         valA = new Date(valA).getTime()
         valB = new Date(valB).getTime()
+      } else if (field === 'rating') {
+        valA = a.averageRating || 0
+        valB = b.averageRating || 0
+      } else if (field === 'comments') {
+        valA = a.commentCount || 0
+        valB = b.commentCount || 0
+      } else if (field === 'ratingsCount') {
+        valA = a.ratingsCount || 0
+        valB = b.ratingsCount || 0
       } else {
         valA = valA.toString().toLowerCase()
         valB = valB.toString().toLowerCase()
@@ -190,8 +199,12 @@ const formatDate = (dateString) => {
                 <select v-model="sortOption" class="filter-select">
                     <option value="createdAt,desc">Mais Recentes</option>
                     <option value="createdAt,asc">Mais Antigas</option>
-                    <option value="title,asc">A-Z</option>
-                    <option value="title,desc">Z-A</option>
+                    <option value="title,asc">Título (A-Z)</option>
+                    <option value="title,desc">Título (Z-A)</option>
+                    <option value="rating,desc">Melhor Classificados</option>
+                    <option value="rating,asc">Pior Classificados</option>
+                    <option value="comments,desc">Mais Comentados</option>
+                    <option value="ratingsCount,desc">Mais Avaliados</option>
                 </select>
             </div>
 

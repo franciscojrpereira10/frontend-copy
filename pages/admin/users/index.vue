@@ -1,9 +1,9 @@
 <script setup>
 import { useAuthStore } from '~/stores/auth-store'
 
-definePageMeta({
-  middleware: ['auth']
-})
+// definePageMeta({
+//   middleware: ['auth']
+// })
 
 const config = useRuntimeConfig()
 const api = config.public.apiBase
@@ -65,14 +65,28 @@ async function toggleBlock(user) {
   }
 }
 
-async function changeRole(user) {
-  // Toggle: Se for ADMIN passa a CONTRIBUTOR, senão vira ADMIN
-  const currentRole = user.role || 'CONTRIBUTOR'
-  const newRole = currentRole === 'ADMIN' ? 'CONTRIBUTOR' : 'ADMIN'
-  
-  const displayRole = newRole === 'ADMIN' ? 'Administrador' : 'Contribuinte (Normal)'
-  if (!confirm(`Mudar role de ${user.username} para ${displayRole}?`)) return
+const showRoleModal = ref(false)
+const selectedUser = ref(null)
+const selectedRole = ref(null)
 
+const availableRoles = [
+  { value: 'ADMIN', label: 'Administrador' },
+  { value: 'MANAGER', label: 'Gestor (Manager)' },
+  { value: 'CONTRIBUTOR', label: 'Contribuinte (Normal)' }
+]
+
+function openRoleModal(user) {
+  selectedUser.value = user
+  selectedRole.value = user.role // Default to current role
+  showRoleModal.value = true
+}
+
+async function confirmChangeRole() {
+  if (!selectedUser.value || !selectedRole.value) return
+  
+  const user = selectedUser.value
+  const newRole = selectedRole.value
+  
   try {
     await $fetch(`${api}/users/${user.id}/role`, {
       method: 'PATCH',
@@ -80,10 +94,17 @@ async function changeRole(user) {
       body: { role: newRole }
     })
     user.role = newRole
+    closeRoleModal()
   } catch (e) {
     console.error('Erro ao mudar role:', e)
     alert('Erro ao alterar role: ' + (e.message || 'Erro desconhecido'))
   }
+}
+
+function closeRoleModal() {
+  showRoleModal.value = false
+  selectedUser.value = null
+  selectedRole.value = null
 }
 
 async function softDeleteUser(user) {
@@ -208,8 +229,15 @@ onMounted(() => {
               </span>
             </td>
             <td class="actions">
+              <button
+                @click="router.push(`/admin/users/${user.id}/activity`)"
+                class="btn-icon"
+                title="Ver Atividade"
+              >
+                🕒
+              </button>
               <button 
-                @click="changeRole(user)" 
+                @click="openRoleModal(user)" 
                 class="btn-icon" 
                 title="Mudar Role"
                 :disabled="user.username === authStore.user?.username"
@@ -241,6 +269,31 @@ onMounted(() => {
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Role Modal -->
+    <div v-if="showRoleModal" class="modal-overlay" @click="closeRoleModal">
+      <div class="modal-content" @click.stop>
+        <h3>Alterar Role de {{ selectedUser?.username }}</h3>
+        <p class="modal-desc">Selecione o novo nível de permissão para este utilizador.</p>
+
+        <div class="role-options">
+          <label v-for="role in availableRoles" :key="role.value" class="role-option">
+            <input 
+              type="radio" 
+              name="role" 
+              :value="role.value" 
+              v-model="selectedRole"
+            >
+            <span class="role-label-text">{{ role.label }}</span>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button @click="closeRoleModal" class="btn-secondary">Cancelar</button>
+          <button @click="confirmChangeRole" class="btn-primary">Guardar</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -339,4 +392,35 @@ onMounted(() => {
 .retry-btn { margin-top: 10px; padding: 8px 16px; background: #0f172a; color: white; border: none; border-radius: 6px; cursor: pointer; }
 
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center;
+  z-index: 1000; backdrop-filter: blur(2px);
+}
+.modal-content {
+  background: white; padding: 24px; border-radius: 12px;
+  width: 90%; max-width: 400px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  animation: modalPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes modalPop { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.modal-content h3 { margin: 0 0 8px 0; color: #0f172a; font-size: 1.25rem; }
+.modal-desc { color: #64748b; margin-bottom: 20px; font-size: 0.95rem; }
+
+.role-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.role-option {
+  display: flex; align-items: center; gap: 10px; padding: 12px;
+  border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: all 0.2s;
+}
+.role-option:hover { background: #f8fafc; border-color: #cbd5e1; }
+.role-option:has(input:checked) { background: #eff6ff; border-color: #3b82f6; }
+.role-label-text { color: #334155; font-weight: 500; }
+
+.modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+.btn-secondary { background: white; border: 1px solid #cbd5e1; color: #475569; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; }
+.btn-primary { background: #0f172a; border: 1px solid #0f172a; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; }
+.btn-secondary:hover { background: #f1f5f9; }
+.btn-primary:hover { background: #1e293b; }
 </style>

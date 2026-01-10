@@ -35,12 +35,9 @@ export default defineNuxtRouteMiddleware((to) => {
 
     // Se for publicações (lista e detalhes) -> OK. 
     // MAS /publications/create TEM de ser bloqueado.
-    if (path.startsWith('/publications')) {
-      if (path === '/publications/create') {
-        return navigateTo('/login')
-      }
-      return
-    }
+    // Publicações agoras são privadas? O user diz "grande erro de segurança".
+    // Então removemos a exceção para /publications
+    // if (path.startsWith('/publications')) { ... } REMOVIDO
 
     // Se for Tags ou Statistics (parece que eram publicas no default layout?)
     // Navbar diz: Auth required for Tags, Statistics.
